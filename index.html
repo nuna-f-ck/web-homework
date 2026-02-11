@@ -32,96 +32,139 @@
   </body>
 
   <script>
-    "use strict";
-    // Находим все элементы из html
-    const comments = document.getElementById("comments");
-    const name = document.getElementById("name");
-    const comment = document.getElementById("comment");
-    const buttonForm = document.getElementById("button");
+"use strict";
+// Находим все элементы из html
+const comments = document.getElementById("comments");
+const nameInput = document.getElementById("name");
+const commentInput = document.getElementById("comment");
+const buttonForm = document.getElementById("button");
 
-    // Массив с количеством лайков на комментариях
-    const commentsList = [
-      {
+// Функция для экранирования HTML
+function escapeHtml(text) {
+    return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+// Массив с количеством лайков на комментариях
+const commentsList = [
+    {
         userName: "Глеб Фокин",
         time: '12.02.22 12:18',
         commentText: "Это будет первый комментарий на этой странице",
         likes: 3,
         isLiked: false
-      },
-      {
+    },
+    {
         userName: "Варвара Н.",
         time: '13.02.22 19:22',
         commentText: "Мне нравится как оформлена эта страница! ❤",
         likes: 75,
         isLiked: true
-      }
-    ]
+    }
+]
 
-    // Рендеринг комментариев
-    function renderComments(list) {
-        const container = document.getElementById("comments");
-        container.innerHTML = list.map((item, index) => 
-                `<li class="comment">
-                    <div class="comment-header">
-                        <div>${item.userName}</div>
-                        <div>${item.time}</div>
+// Рендеринг комментариев
+function renderComments(list) {
+    const container = document.getElementById("comments");
+    container.innerHTML = list.map((item, index) => 
+            `<li class="comment" data-index="${index}">
+                <div class="comment-header">
+                    <div>${escapeHtml(item.userName)}</div>
+                    <div>${item.time}</div>
+                </div>
+                <div class="comment-body">
+                    <div class="comment-text">${escapeHtml(item.commentText)}</div>
+                </div>
+                <div class="comment-footer">
+                    <div class="likes">
+                        <span class="likes-counter">${item.likes}</span>
+                        <button data-index="${index}" class="like-button ${item.isLiked ? '-active-like' : ''}"></button>
                     </div>
-                    <div class="comment-body">
-                        <div class="comment-text">${item.commentText}</div>
-                    </div>
-                    <div class="comment-footer">
-                        <div class="likes">
-                            <span class="likes-counter">${item.likes}</span>
-                            <button data-index="${index}" class="like-button ${item.isLiked ? '-active-like' : ''}"></button>
-                        </div>
-                    </div>
-                </li>`).join("");
+                </div>
+            </li>`).join("");
+}
+
+// Функция для добавления цитирования
+function quoteComment(userName, commentText) {
+    const safeUserName = escapeHtml(userName);
+    const safeCommentText = escapeHtml(commentText);
+    
+    const lines = safeCommentText.split('\n');
+    const quotedText = lines.map(line => `> ${safeUserName}, ${line}`).join('\n');
+    
+    commentInput.value = `${quotedText}\n\n`;
+    
+    commentInput.focus();
+    commentInput.selectionStart = commentInput.value.length;
+    commentInput.selectionEnd = commentInput.value.length;
+}
+
+// Обработчик клика на кнопку отправки комментария
+buttonForm.addEventListener("click", () => {
+    if (nameInput.value === "" || commentInput.value === "") {
+        alert('Заполни все поля');
+        return;
     }
 
-    // Обработчик клика на кнопку отправки комментария
-    buttonForm.addEventListener("click", () => {
-        if (name.value === "" || comment.value === "") {
-            alert('Заполни все поля');
-            return;
-        }
+    const now = new Date();
+    const dateStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')}.${now.getFullYear().toString().slice(-2)} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-        const now = new Date();
-        const dateStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')}.${now.getFullYear().toString().slice(-2)} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    // Экранируем данные перед сохранением
+    const safeUserName = escapeHtml(nameInput.value);
+    const safeCommentText = commentInput.value;
 
-        commentsList.push({
-            userName: name.value,
-            time: dateStr,
-            commentText: comment.value,
-            likes: 0,
-            isLiked: false
-        });
-
-        renderComments(commentsList);
-
-        name.value = '';
-        comment.value = '';
+    commentsList.push({
+        userName: safeUserName,
+        time: dateStr,
+        commentText: safeCommentText,
+        likes: 0,
+        isLiked: false
     });
 
-    // Обработчик клика на лайк
-    comments.addEventListener("click", (event) => {
-        if (event.target.classList.contains('like-button')) {
-            const index = event.target.dataset.index;
-            
-            if (commentsList[index].isLiked === false) {
-                commentsList[index].isLiked = true;
-                commentsList[index].likes += 1;
-            } else {
-                commentsList[index].isLiked = false;
-                commentsList[index].likes -= 1;
-            }
-            
-            renderComments(commentsList);
-        }
-    });
-
-    // Вызываем рендеринг комментариев
     renderComments(commentsList);
 
-    console.log("It works!");
+    nameInput.value = '';
+    commentInput.value = '';
+    console.log('комментарий отправили')
+});
+
+// Обработчик клика на список комментариев
+comments.addEventListener("click", (event) => {
+    // Если клик на кнопке лайка
+    if (event.target.classList.contains('like-button')) {
+        event.stopPropagation();
+        const index = event.target.dataset.index;
+        
+        if (commentsList[index].isLiked === false) {
+            commentsList[index].isLiked = true;
+            commentsList[index].likes += 1;
+        } else {
+            commentsList[index].isLiked = false;
+            commentsList[index].likes -= 1;
+        }
+        renderComments(commentsList);
+        console.log('на лайк нажали');
+        return;
+    }
+    
+    // Если клик на комментарии (но не на лайке)
+    const commentElement = event.target.closest('.comment');
+    if (commentElement) {
+        const index = commentElement.dataset.index;
+        const commentData = commentsList[index];
+        
+        quoteComment(commentData.userName, commentData.commentText);
+        console.log('на комментарий нажали, начато цитирование');
+    }
+});
+
+// Вызываем рендеринг комментариев
+renderComments(commentsList);
+
+console.log("It works!");
   </script>
 </html>
